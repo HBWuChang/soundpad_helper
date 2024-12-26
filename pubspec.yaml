@@ -29,6 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   http: ^1.2.2
+  marquee: ^2.3.0
   shared_preferences: ^2.0.0 
   flutter:
     sdk: flutter
