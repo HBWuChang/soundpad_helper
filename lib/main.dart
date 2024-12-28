@@ -15,12 +15,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'soundpad_helper',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'soundpad_helper 哔哩哔哩@谢必安_玄'),
     );
   }
 }
@@ -38,22 +38,32 @@ class _MyHomePageState extends State<MyHomePage> {
   List<GridItem> items = [];
   int crossAxisCount = 5;
   TextEditingController serverAddressController = TextEditingController();
+  bool changing = false;
+  int changingindex = 0;
   @override
   void initState() {
     super.initState();
     _loadItems();
     _loadServerAddress();
   }
-
+  
   void _loadServerAddress() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? serverAddress = prefs.getString('server_address');
+    String? Count = prefs.getString('crossAxisCount');
     if (serverAddress != null) {
       setState(() {
         serverAddressController.text = serverAddress;
       });
     } else {
       serverAddressController.text = '192.168.2.123:24122';
+    }
+    if (Count != null) {
+      setState(() {
+        crossAxisCount = int.parse(Count);
+      });
+    } else {
+      crossAxisCount = 5;
     }
   }
 
@@ -107,7 +117,7 @@ class _MyHomePageState extends State<MyHomePage> {
           break;
         }
       } while (true);
-      items.add(GridItem(title: 'Title', subtitle: subtitle));
+      items.add(GridItem(title: '标题', subtitle: subtitle));
       _saveItems();
     });
   }
@@ -122,7 +132,7 @@ class _MyHomePageState extends State<MyHomePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Edit Item'),
+          title: const Text('编辑控件'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -138,13 +148,13 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel'),
+              child: const Text('取消'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: const Text('Delete'),
+              child: const Text('删除'),
               onPressed: () {
                 setState(() {
                   items.removeAt(index);
@@ -154,7 +164,7 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
             TextButton(
-              child: const Text('Save'),
+              child: const Text('保存'),
               onPressed: () {
                 bool hasDuplicate = false;
                 for (int i = 0; i < items.length; i++) {
@@ -171,8 +181,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: const Text('Error'),
-                        content: const Text('Subtitle already exists'),
+                        title: const Text('错误'),
+                        content: const Text('按键重复，请重新输入'),
                         actions: <Widget>[
                           TextButton(
                             child: const Text('OK'),
@@ -190,6 +200,16 @@ class _MyHomePageState extends State<MyHomePage> {
                   items[index].title = titleController.text;
                   items[index].subtitle = subtitleController.text;
                   _saveItems();
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('移动'),
+              onPressed: () {
+                setState(() {
+                  changing = true;
+                  changingindex = index;
                 });
                 Navigator.of(context).pop();
               },
@@ -241,14 +261,40 @@ class _MyHomePageState extends State<MyHomePage> {
   void _saveServerAddress() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('server_address', serverAddressController.text);
+    await prefs.setString('crossAxisCount', crossAxisCount.toString());
   }
 
   Widget _buildItem(BuildContext context, int index) {
     return GestureDetector(
       onTap: () {
+        if (changing){
+          setState(() {
+            // items.insert(changingindex, items.removeAt(index));
+            var temp = items[changingindex];
+            if (changingindex < index) {
+              for (int i = changingindex; i < index; i++) {
+                items[i] = items[i + 1];
+              }
+            } else {
+              for (int i = changingindex; i > index; i--) {
+                items[i] = items[i - 1];
+              }
+            }
+            items[index] = temp;
+            _saveItems();
+            changing = false;
+          });
+          return;
+        }
         _sendPostRequest(items[index].subtitle);
       },
       onLongPress: () {
+        if (changing){
+          setState(() {
+            changing = false;
+          });
+          return;
+        }
         _editItem(index);
       },
       child: Card(
@@ -276,10 +322,12 @@ class _MyHomePageState extends State<MyHomePage> {
             },
         child: Scaffold(
           appBar: AppBar(
-            title: TextField(
+            title: changing ? const Text('请点击要移动到的位置,长按任一控件取消') : 
+            TextField(
               controller: serverAddressController,
               decoration: const InputDecoration(
-                hintText: 'Enter server address',
+                // hintText: '请输入电脑显示的服务器地址',
+                labelText: '请输入电脑显示的服务器地址',
               ),
               onChanged: (value) {
                 _saveServerAddress();
@@ -288,12 +336,13 @@ class _MyHomePageState extends State<MyHomePage> {
             actions: <Widget>[
               PopupMenuButton<int>(
                 onSelected: (value) {
+                  _saveServerAddress();
                   setState(() {
                     crossAxisCount = value;
                   });
                 },
                 itemBuilder: (BuildContext context) {
-                  return [2, 3, 4, 5, 6].map((int value) {
+                  return [2, 3, 4, 5, 6,7,8,9,10,11,12].map((int value) {
                     return PopupMenuItem<int>(
                       value: value,
                       child: Text('$value columns'),
@@ -310,7 +359,7 @@ class _MyHomePageState extends State<MyHomePage> {
               })),
           floatingActionButton: FloatingActionButton(
             onPressed: _addItem,
-            tooltip: 'Add Item',
+            tooltip: '添加控件',
             child: const Icon(Icons.add),
           ),
         ));
