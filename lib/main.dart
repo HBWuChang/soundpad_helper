@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:marquee/marquee.dart';
+// import 'package:marquee/marquee.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -35,7 +36,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<GridItem> items = [];
-  int crossAxisCount = 4;
+  int crossAxisCount = 5;
   TextEditingController serverAddressController = TextEditingController();
   @override
   void initState() {
@@ -242,6 +243,30 @@ class _MyHomePageState extends State<MyHomePage> {
     await prefs.setString('server_address', serverAddressController.text);
   }
 
+  Widget _buildItem(BuildContext context, int index) {
+    return GestureDetector(
+      onTap: () {
+        _sendPostRequest(items[index].subtitle);
+      },
+      onLongPress: () {
+        _editItem(index);
+      },
+      child: Card(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            double fontSize = constraints.maxWidth * 0.25;
+            return Text(
+              items[index].title,
+              style: TextStyle(fontSize: fontSize),
+              textAlign: TextAlign.center,
+              softWrap: true,
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -268,7 +293,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   });
                 },
                 itemBuilder: (BuildContext context) {
-                  return [2, 3, 4].map((int value) {
+                  return [2, 3, 4, 5, 6].map((int value) {
                     return PopupMenuItem<int>(
                       value: value,
                       child: Text('$value columns'),
@@ -278,49 +303,11 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ],
           ),
-          body: GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          body: StaggeredGrid.count(
               crossAxisCount: crossAxisCount,
-            ),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () {
-                  _sendPostRequest(items[index].subtitle);
-                },
-                onLongPress: () {
-                  _editItem(index);
-                },
-                child: Card(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      // Text(items[index].title,
-                      //     style: const TextStyle(fontSize: 20)),
-                      Container(
-                        height: 30,
-                        child: Marquee(
-                          text: items[index].title,
-                          style: TextStyle(fontSize: 20),
-                          scrollAxis: Axis.horizontal,
-                          blankSpace: 20.0,
-                          velocity: 50.0,
-                          pauseAfterRound: Duration(seconds: 1),
-                          startPadding: 10.0,
-                          accelerationDuration: Duration(seconds: 1),
-                          accelerationCurve: Curves.linear,
-                          decelerationDuration: Duration(milliseconds: 500),
-                          decelerationCurve: Curves.easeOut,
-                        ),
-                      ),
-                      Text(items[index].subtitle,
-                          style: const TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+              children: List.generate(items.length, (index) {
+                return _buildItem(context, index);
+              })),
           floatingActionButton: FloatingActionButton(
             onPressed: _addItem,
             tooltip: 'Add Item',
