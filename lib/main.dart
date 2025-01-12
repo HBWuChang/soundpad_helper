@@ -46,7 +46,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _loadItems();
     _loadServerAddress();
   }
-  
+
   void _loadServerAddress() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? serverAddress = prefs.getString('server_address');
@@ -264,10 +264,67 @@ class _MyHomePageState extends State<MyHomePage> {
     await prefs.setString('crossAxisCount', crossAxisCount.toString());
   }
 
+  void _msg(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      duration: const Duration(seconds: 3),
+    ));
+  }
+
+  void save_config() async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://' + serverAddressController.text + '/save_config'),
+        body: jsonEncode(<String, dynamic>{
+          'crossAxisCount': crossAxisCount,
+          'items': items.map((item) {
+            return {'title': item.title, 'subtitle': item.subtitle};
+          }).toList(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Success: ${response.body}');
+        _msg('保存配置到服务器成功');
+      } else {
+        throw Exception('Failed to send post request');
+      }
+    } catch (e) {
+      print('Failed to send stop request');
+      _msg('保存配置到服务器失败\n' + e.toString());
+    }
+  }
+
+  void load_config() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://' + serverAddressController.text + '/load_config'),
+      );
+
+      if (response.statusCode == 200) {
+        print('Success: ${response.body}');
+        var data = jsonDecode(jsonDecode(response.body)["data"]);
+
+        setState(() {
+          crossAxisCount = data['crossAxisCount'];
+          items = List<GridItem>.from(data['items'].map((item) {
+            return GridItem(title: item['title'], subtitle: item['subtitle']);
+          }));
+        });
+        _saveItems();
+        _msg('从服务器加载配置成功');
+      } else {
+        throw Exception('Failed to send post request');
+      }
+    } catch (e) {
+      _msg('从服务器加载配置失败\n' + e.toString());
+    }
+  }
+
   Widget _buildItem(BuildContext context, int index) {
     return GestureDetector(
       onTap: () {
-        if (changing){
+        if (changing) {
           setState(() {
             // items.insert(changingindex, items.removeAt(index));
             var temp = items[changingindex];
@@ -289,7 +346,7 @@ class _MyHomePageState extends State<MyHomePage> {
         _sendPostRequest(items[index].subtitle);
       },
       onLongPress: () {
-        if (changing){
+        if (changing) {
           setState(() {
             changing = false;
           });
@@ -322,18 +379,74 @@ class _MyHomePageState extends State<MyHomePage> {
             },
         child: Scaffold(
           appBar: AppBar(
-            title: changing ? const Text('请点击要移动到的位置,长按任一控件取消') : 
-            TextField(
-              controller: serverAddressController,
-              decoration: const InputDecoration(
-                // hintText: '请输入电脑显示的服务器地址',
-                labelText: '请输入电脑显示的服务器地址',
-              ),
-              onChanged: (value) {
-                _saveServerAddress();
-              },
-            ),
+            title: changing
+                ? const Text('请点击要移动到的位置,长按任一控件取消')
+                : TextField(
+                    controller: serverAddressController,
+                    decoration: const InputDecoration(
+                      // hintText: '请输入电脑显示的服务器地址',
+                      labelText: '请输入电脑显示的服务器地址',
+                    ),
+                    onChanged: (value) {
+                      _saveServerAddress();
+                    },
+                  ),
             actions: <Widget>[
+              IconButton(
+                icon: const Icon(Icons.upload),
+                onPressed: () {
+                  // save_config();
+                  showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('保存到服务器？'),
+                          actions: <Widget>[
+                            TextButton(
+                              child: const Text('取消'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            TextButton(
+                              child: const Text('保存'),
+                              onPressed: () {
+                                save_config();
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ],
+                        );
+                      });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.download),
+                onPressed: () {
+                  showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('从服务器加载？'),
+                          actions: <Widget>[
+                            TextButton(
+                              child: const Text('取消'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            TextButton(
+                              child: const Text('加载'),
+                              onPressed: () {
+                                load_config();
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ],
+                        );
+                      });
+                },
+              ),
               PopupMenuButton<int>(
                 onSelected: (value) {
                   _saveServerAddress();
@@ -342,7 +455,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   });
                 },
                 itemBuilder: (BuildContext context) {
-                  return [2, 3, 4, 5, 6,7,8,9,10,11,12].map((int value) {
+                  return [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((int value) {
                     return PopupMenuItem<int>(
                       value: value,
                       child: Text('$value columns'),
