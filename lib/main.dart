@@ -465,11 +465,13 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ],
           ),
-          body: StaggeredGrid.count(
-              crossAxisCount: crossAxisCount,
-              children: List.generate(items.length, (index) {
-                return _buildItem(context, index);
-              })),
+          body: SingleChildScrollView(
+            child: StaggeredGrid.count(
+                crossAxisCount: crossAxisCount,
+                children: List.generate(items.length, (index) {
+                  return _buildItem(context, index);
+                })),
+          ),
           floatingActionButton: FloatingActionButton(
             onPressed: _addItem,
             tooltip: '添加控件',
